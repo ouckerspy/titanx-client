@@ -12,11 +12,13 @@ import tkinter as tk
 from tkinter import font as tkfont
 from PIL import Image, ImageTk
 
-GAME_MODE = "FiveM"
+GAME_MODE   = "FiveM"
+APP_VERSION = "2.5.0"
 ACCENT    = "#dc2626"
 BG        = "#060606"
 SURFACE   = "#0e0e0e"
 WIN_W, WIN_H = 920, 580
+VERCEL_URL  = "https://titanx-landing.vercel.app"
 
 
 def _gif_path():
@@ -113,6 +115,37 @@ class TitanXApp:
 
         self._build_idle()
         root.protocol("WM_DELETE_WINDOW", self._on_close)
+        threading.Thread(target=self._check_update, daemon=True).start()
+
+    # ─── Auto-update check ─────────────────────────────────────────
+    def _check_update(self):
+        try:
+            req = urllib.request.Request(
+                f"{VERCEL_URL}/version.json",
+                headers={"User-Agent": "TitanXClient/2.5.0"}
+            )
+            with urllib.request.urlopen(req, timeout=5) as r:
+                data = json.loads(r.read())
+            latest = data.get("fivem", APP_VERSION)
+            if latest != APP_VERSION:
+                self.root.after(0, lambda v=latest: self._show_update_banner(v))
+        except Exception:
+            pass
+
+    def _show_update_banner(self, new_version):
+        banner = tk.Frame(self.idle_frame, bg="#1a0a0a",
+                          highlightthickness=1, highlightbackground=ACCENT)
+        banner.place(relx=0, rely=0, relwidth=1, height=46)
+        tk.Label(banner, text=f"⬆  Nueva versión disponible: v{new_version}",
+                 font=tkfont.Font(family="Segoe UI", size=10, weight="bold"),
+                 fg="#fca5a5", bg="#1a0a0a").pack(side="left", padx=16)
+        def _open_dl():
+            import webbrowser
+            webbrowser.open(f"{VERCEL_URL}/downloads/TitanXClient_FiveM.exe")
+        tk.Button(banner, text="Descargar actualización", font=tkfont.Font(family="Segoe UI", size=9, weight="bold"),
+                  fg="#fff", bg=ACCENT, activebackground="#b91c1c", activeforeground="#fff",
+                  relief="flat", padx=14, pady=6, cursor="hand2", bd=0, command=_open_dl
+                  ).pack(side="right", padx=16, pady=8)
 
     # ─── Idle screen ───────────────────────────────────────────────
     def _build_idle(self):
