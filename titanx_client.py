@@ -13,11 +13,13 @@ from tkinter import font as tkfont
 from PIL import Image, ImageTk
 
 GAME_MODE   = "FiveM"
-APP_VERSION = "2.5.0"
+APP_VERSION = "2.6.0"
 ACCENT    = "#dc2626"
+ACCENT2   = "#8b5cf6"
 BG        = "#060606"
-SURFACE   = "#0e0e0e"
-WIN_W, WIN_H = 920, 580
+SURFACE   = "#0d0d0d"
+SURFACE2  = "#111111"
+WIN_W, WIN_H = 980, 620
 VERCEL_URL  = "https://titanx-landing.vercel.app"
 
 
@@ -103,15 +105,16 @@ class TitanXApp:
         try: root.iconbitmap(default="")
         except: pass
 
-        self.f_title  = tkfont.Font(family="Segoe UI", size=30, weight="bold")
+        self.f_title  = tkfont.Font(family="Segoe UI", size=34, weight="bold")
         self.f_sub    = tkfont.Font(family="Segoe UI", size=10)
         self.f_label  = tkfont.Font(family="Segoe UI", size=8, weight="bold")
-        self.f_code   = tkfont.Font(family="Consolas", size=28, weight="bold")
-        self.f_btn    = tkfont.Font(family="Segoe UI", size=12, weight="bold")
+        self.f_code   = tkfont.Font(family="Consolas", size=30, weight="bold")
+        self.f_btn    = tkfont.Font(family="Segoe UI", size=13, weight="bold")
         self.f_status = tkfont.Font(family="Segoe UI", size=9)
-        self.f_pct    = tkfont.Font(family="Segoe UI", size=40, weight="bold")
+        self.f_pct    = tkfont.Font(family="Segoe UI", size=46, weight="bold")
         self.f_eta    = tkfont.Font(family="Segoe UI", size=9)
-        self.f_module = tkfont.Font(family="Segoe UI", size=9)
+        self.f_module = tkfont.Font(family="Consolas", size=9)
+        self.f_tag    = tkfont.Font(family="Segoe UI", size=8, weight="bold")
 
         self._build_idle()
         root.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -152,6 +155,9 @@ class TitanXApp:
         self.idle_frame = tk.Frame(self.root, bg=BG)
         self.idle_frame.place(x=0, y=0, width=WIN_W, height=WIN_H)
 
+        # Top accent line
+        tk.Frame(self.idle_frame, bg=ACCENT, height=2).pack(fill="x")
+
         # Left panel — eye + title
         left = tk.Frame(self.idle_frame, bg=BG, width=WIN_W // 2)
         left.pack(side="left", fill="y")
@@ -160,82 +166,120 @@ class TitanXApp:
         inner = tk.Frame(left, bg=BG)
         inner.place(relx=0.5, rely=0.5, anchor="center")
 
-        # GIF eye
+        # Version badge
+        badge = tk.Frame(inner, bg="#1a0000")
+        badge.pack(pady=(0, 14))
+        tk.Label(badge, text=f"  TITAN X  v{APP_VERSION}  ", font=self.f_tag,
+                 fg=ACCENT, bg="#1a0000").pack(padx=8, pady=4)
+
+        # GIF eye — bigger
         try:
-            self._gif = GifLabel(inner, _gif_path(), scale=1.4)
-            self._gif.pack(pady=(0, 16))
-        except Exception as e:
-            tk.Label(inner, text="👁", font=tkfont.Font(size=60), bg=BG).pack(pady=(0,16))
+            self._gif = GifLabel(inner, _gif_path(), scale=2.2)
+            self._gif.pack(pady=(0, 18))
+        except Exception:
+            tk.Label(inner, text="👁", font=tkfont.Font(size=80), bg=BG).pack(pady=(0, 18))
 
         tk.Label(inner, text="TITAN X", font=self.f_title, fg=ACCENT, bg=BG).pack()
-        tk.Label(inner, text="Verificación forense de sistema",
-                 font=self.f_sub, fg="#2a2a2a", bg=BG).pack(pady=(4, 0))
+        tk.Label(inner, text="Sistema de verificación forense avanzada",
+                 font=self.f_sub, fg="#2a2a2a", bg=BG).pack(pady=(5, 0))
+
+        # Stats row
+        stats_row = tk.Frame(inner, bg=BG)
+        stats_row.pack(pady=(18, 0))
+        for label, val in [("MÓDULOS", "199"), ("JUEGO", "FiveM"), ("MODO", "Forense")]:
+            col = tk.Frame(stats_row, bg="#0d0d0d", padx=12, pady=6)
+            col.pack(side="left", padx=4)
+            tk.Label(col, text=val, font=tkfont.Font(family="Segoe UI", size=11, weight="bold"),
+                     fg="#fff", bg="#0d0d0d").pack()
+            tk.Label(col, text=label, font=tkfont.Font(family="Segoe UI", size=7, weight="bold"),
+                     fg="#2a2a2a", bg="#0d0d0d").pack()
 
         # Right panel — form
         right = tk.Frame(self.idle_frame, bg=SURFACE)
         right.pack(side="right", fill="both", expand=True)
 
+        # Right top accent
+        tk.Frame(right, bg="#1a1a1a", height=1).pack(fill="x")
+
         form = tk.Frame(right, bg=SURFACE)
-        form.place(relx=0.5, rely=0.5, anchor="center")
+        form.place(relx=0.5, rely=0.48, anchor="center")
 
-        tk.Label(form, text="CÓDIGO SS", font=self.f_label,
-                 fg="#333", bg=SURFACE).pack(anchor="w", pady=(0, 6))
+        tk.Label(form, text="CÓDIGO DE ESCANEO SS", font=self.f_label,
+                 fg="#444", bg=SURFACE).pack(anchor="w", pady=(0, 8))
 
-        self._ef = tk.Frame(form, bg="#141414",
-                             highlightthickness=2, highlightbackground="#222")
-        self._ef.pack(pady=(0, 8))
+        self._ef = tk.Frame(form, bg="#0a0a0a",
+                             highlightthickness=2, highlightbackground="#1a1a1a")
+        self._ef.pack(pady=(0, 10))
         self.code_var = tk.StringVar()
         self.entry = tk.Entry(
             self._ef, textvariable=self.code_var, font=self.f_code,
-            justify="center", width=7, bg="#141414", fg="#fff",
-            insertbackground="#fff", relief="flat", bd=10, highlightthickness=0,
+            justify="center", width=7, bg="#0a0a0a", fg="#fff",
+            insertbackground=ACCENT, relief="flat", bd=12, highlightthickness=0,
         )
         self.entry.pack()
         self.entry.bind("<KeyRelease>", self._fmt)
         self.entry.bind("<Return>", lambda e: self._start())
         self.entry.bind("<FocusIn>",  lambda e: self._ef.config(highlightbackground=ACCENT))
-        self.entry.bind("<FocusOut>", lambda e: self._ef.config(highlightbackground="#222"))
+        self.entry.bind("<FocusOut>", lambda e: self._ef.config(highlightbackground="#1a1a1a"))
 
         self.status_lbl = tk.Label(form, text="Ingresá el código que te dio el staff",
                                     font=self.f_status, fg="#2a2a2a", bg=SURFACE)
-        self.status_lbl.pack(pady=(2, 16))
+        self.status_lbl.pack(pady=(2, 18))
 
         self.btn = tk.Button(
-            form, text="INICIAR VERIFICACIÓN", font=self.f_btn,
+            form, text="⚡  INICIAR VERIFICACIÓN", font=self.f_btn,
             fg="#fff", bg=ACCENT, activebackground="#b91c1c", activeforeground="#fff",
-            relief="flat", padx=50, pady=14, cursor="hand2", command=self._start, bd=0,
+            relief="flat", padx=50, pady=16, cursor="hand2", command=self._start, bd=0,
         )
         self.btn.pack()
 
-        tk.Label(right, text="FiveM · 187 módulos forenses",
+        # Info note
+        tk.Label(form, text="El escaneo corre localmente. Solo el staff ve el resultado.",
                  font=tkfont.Font(family="Segoe UI", size=8),
-                 fg="#1a1a1a", bg=SURFACE).pack(side="bottom", pady=12)
+                 fg="#1a1a1a", bg=SURFACE).pack(pady=(14, 0))
+
+        # Bottom bar
+        bot = tk.Frame(right, bg="#0a0a0a", height=30)
+        bot.pack(side="bottom", fill="x"); bot.pack_propagate(False)
+        tk.Label(bot, text=f"FiveM · 199 módulos forenses · v{APP_VERSION}",
+                 font=tkfont.Font(family="Segoe UI", size=8),
+                 fg="#1f1f1f", bg="#0a0a0a").pack(side="left", padx=14, pady=7)
+        tk.Label(bot, text="titanx-landing.vercel.app",
+                 font=tkfont.Font(family="Segoe UI", size=8),
+                 fg="#1f1f1f", bg="#0a0a0a").pack(side="right", padx=14, pady=7)
 
     # ─── Scan screen ───────────────────────────────────────────────
     def _build_scan(self):
         self.scan_frame = tk.Frame(self.root, bg=BG)
         self.scan_frame.place(x=0, y=0, width=WIN_W, height=WIN_H)
 
-        bar = tk.Frame(self.scan_frame, bg=SURFACE, height=52)
+        # Top accent line
+        tk.Frame(self.scan_frame, bg=ACCENT, height=2).pack(fill="x")
+
+        bar = tk.Frame(self.scan_frame, bg="#0a0a0a", height=48)
         bar.pack(fill="x"); bar.pack_propagate(False)
         tk.Label(bar, text="TITAN X",
                  font=tkfont.Font(family="Segoe UI", size=13, weight="bold"),
-                 fg=ACCENT, bg=SURFACE).pack(side="left", padx=24, pady=14)
+                 fg=ACCENT, bg="#0a0a0a").pack(side="left", padx=22, pady=12)
+        tk.Label(bar, text=f"v{APP_VERSION}",
+                 font=tkfont.Font(family="Segoe UI", size=9),
+                 fg="#222", bg="#0a0a0a").pack(side="left", pady=12)
         self.status_top = tk.Label(bar, text="● ESCANEANDO",
                                     font=tkfont.Font(family="Segoe UI", size=9, weight="bold"),
-                                    fg="#22c55e", bg=SURFACE)
-        self.status_top.pack(side="right", padx=24)
+                                    fg="#22c55e", bg="#0a0a0a")
+        self.status_top.pack(side="right", padx=22)
 
         content = tk.Frame(self.scan_frame, bg=BG)
         content.pack(fill="both", expand=True)
 
-        # Left: GIF
-        left = tk.Frame(content, bg=BG, width=310)
+        # Left: BIG GIF centered
+        left = tk.Frame(content, bg=BG, width=360)
         left.pack(side="left", fill="y"); left.pack_propagate(False)
         try:
-            gif2 = GifLabel(left, _gif_path(), scale=1.4)
+            gif2 = GifLabel(left, _gif_path(), scale=2.0)
             gif2.place(relx=0.5, rely=0.5, anchor="center")
-        except: pass
+        except Exception:
+            pass
 
         # Right: progress
         right = tk.Frame(content, bg=SURFACE)
@@ -243,37 +287,65 @@ class TitanXApp:
         pa = tk.Frame(right, bg=SURFACE)
         pa.place(relx=0.5, rely=0.5, anchor="center")
 
+        # Module counter badge
+        self.module_counter_lbl = tk.Label(pa, text="0 / 199 módulos",
+                 font=tkfont.Font(family="Segoe UI", size=8, weight="bold"),
+                 fg="#222", bg=SURFACE)
+        self.module_counter_lbl.pack(pady=(0, 6))
+
         self.pct_lbl = tk.Label(pa, text="0%", font=self.f_pct, fg=ACCENT, bg=SURFACE)
         self.pct_lbl.pack()
 
-        pb_bg = tk.Canvas(pa, width=340, height=5, bg="#1a1a1a", highlightthickness=0)
-        pb_bg.pack(pady=(8, 4))
-        self.pb_fill = pb_bg.create_rectangle(0, 0, 0, 5, fill=ACCENT, width=0)
+        # Thick progress bar
+        pb_bg = tk.Canvas(pa, width=360, height=8, bg="#111", highlightthickness=0)
+        pb_bg.pack(pady=(10, 6))
+        self.pb_fill = pb_bg.create_rectangle(0, 0, 0, 8, fill=ACCENT, width=0)
         self._pb_bg = pb_bg
 
         self.module_lbl = tk.Label(pa, text="Iniciando módulos…",
-                                    font=self.f_module, fg="#333", bg=SURFACE)
-        self.module_lbl.pack(pady=(2, 22))
+                                    font=self.f_module, fg="#2a2a2a", bg=SURFACE,
+                                    wraplength=340, justify="center")
+        self.module_lbl.pack(pady=(2, 18))
 
-        tk.Label(pa, text="NO CIERRES ESTA VENTANA",
+        # Category tag
+        self.cat_lbl = tk.Label(pa, text="",
+                 font=tkfont.Font(family="Segoe UI", size=8, weight="bold"),
+                 fg=ACCENT2, bg=SURFACE)
+        self.cat_lbl.pack(pady=(0, 14))
+
+        tk.Label(pa, text="⚠  NO CIERRES ESTA VENTANA",
                  font=tkfont.Font(family="Segoe UI", size=10, weight="bold"),
                  fg="#fff", bg=SURFACE).pack()
-        tk.Label(pa, text="El escaneo corre localmente. El resultado lo ve el staff.",
-                 font=self.f_status, fg="#333", bg=SURFACE).pack(pady=(4, 18))
+        tk.Label(pa, text="El análisis forense corre localmente. Solo el staff ve el resultado.",
+                 font=self.f_status, fg="#222", bg=SURFACE).pack(pady=(5, 20))
 
         self.spinner_lbl = tk.Label(pa, text="◐",
-                                     font=tkfont.Font(family="Segoe UI", size=16),
+                                     font=tkfont.Font(family="Segoe UI", size=18),
                                      fg=ACCENT, bg=SURFACE)
         self.spinner_lbl.pack()
-        self.distract_lbl = tk.Label(pa, text="", font=self.f_status, fg="#2a2a2a", bg=SURFACE)
-        self.distract_lbl.pack(pady=(4, 0))
-        self.eta_lbl = tk.Label(pa, text="", font=self.f_eta, fg="#2a2a2a", bg=SURFACE)
+        self.distract_lbl = tk.Label(pa, text="", font=self.f_module, fg="#222", bg=SURFACE,
+                                      wraplength=340, justify="center")
+        self.distract_lbl.pack(pady=(5, 0))
+        self.eta_lbl = tk.Label(pa, text="", font=self.f_eta, fg="#1a1a1a", bg=SURFACE)
         self.eta_lbl.pack(pady=(4, 0))
 
-        self._msgs = ["Analizando procesos activos…", "Revisando historial de ejecución…",
-                      "Escaneando conexiones de red…", "Verificando firmas digitales…",
-                      "Revisando DLLs cargadas…", "Analizando prefetch…",
-                      "Verificando drivers del sistema…", "Examinando registro de Windows…"]
+        self._msgs = [
+            "Analizando procesos activos en memoria…",
+            "Revisando historial de ejecución de Windows…",
+            "Escaneando conexiones de red activas…",
+            "Verificando firmas digitales de módulos…",
+            "Revisando DLLs cargadas en procesos del juego…",
+            "Analizando prefetch y caché de ejecución…",
+            "Verificando drivers y kernel modules…",
+            "Examinando claves de registro de autorun…",
+            "Escaneando mutexes de cheats conocidos…",
+            "Revisando named pipes sospechosos…",
+            "Analizando historial de PowerShell…",
+            "Verificando archivo hosts y reglas de firewall…",
+            "Buscando ventanas ocultas de cheats…",
+            "Revisando extensiones de navegador…",
+            "Analizando journal de USN del sistema de archivos…",
+        ]
         self._mi = 0
         self._animate_scan()
 
@@ -331,7 +403,7 @@ class TitanXApp:
                             "current": current, "total": total, "category": category,
                             "duration_ms": duration_ms, "eta_seconds": int(rem)}, timeout=5)
                 except: pass
-                self.root.after(0, lambda p=pct, r=rem, l=label: self._upd(p, r, l))
+                self.root.after(0, lambda p=pct, r=rem, l=label, cat=category, d=current, t=total: self._upd(p, r, l, cat, d, t))
             results = run_full_scan(gm, code, on_p, lambda *a: None, deep=deep, workers=1)
             _http("POST", f"{SERVER}/api/codes/{code}/complete",
                   {"results": results, "duration_s": round(time.time() - self.t0, 1)}, timeout=30)
@@ -345,22 +417,29 @@ class TitanXApp:
         self.idle_frame.place_forget()
         self._build_scan()
 
-    def _upd(self, pct, rem, label=""):
-        w = int(340 * max(0, min(1, pct / 100)))
-        self._pb_bg.coords(self.pb_fill, 0, 0, w, 5)
+    def _upd(self, pct, rem, label="", category="", done=0, total=0):
+        w = int(360 * max(0, min(1, pct / 100)))
+        self._pb_bg.coords(self.pb_fill, 0, 0, w, 8)
         self.pct_lbl.config(text=f"{int(pct)}%")
-        if label: self.module_lbl.config(text=label, fg="#444")
+        if label:
+            self.module_lbl.config(text=label, fg="#444")
+        if category:
+            self.cat_lbl.config(text=f"[ {category.upper()} ]")
+        if total:
+            self.module_counter_lbl.config(text=f"{done} / {total} módulos", fg="#333")
         m, s = divmod(int(rem), 60)
         self.eta_lbl.config(text=f"Tiempo restante: {m}m {s:02d}s" if rem > 5 else "Finalizando…")
 
     def _done(self):
         if self._anim_job: self.root.after_cancel(self._anim_job)
-        self._pb_bg.coords(self.pb_fill, 0, 0, 340, 5)
+        self._pb_bg.coords(self.pb_fill, 0, 0, 360, 8)
         self.pct_lbl.config(text="100%")
         self.spinner_lbl.config(text="✓", fg="#22c55e",
-                                 font=tkfont.Font(family="Segoe UI", size=18, weight="bold"))
+                                 font=tkfont.Font(family="Segoe UI", size=22, weight="bold"))
         self.status_top.config(text="● COMPLETADO", fg="#22c55e")
-        self.module_lbl.config(text="Escaneo completado.", fg="#22c55e")
+        self.module_lbl.config(text="Análisis forense completo.", fg="#22c55e")
+        self.cat_lbl.config(text="")
+        self.module_counter_lbl.config(text="")
         self.eta_lbl.config(text="Podés cerrar esta ventana.")
         self.distract_lbl.config(text="")
         self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)
