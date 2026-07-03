@@ -13,7 +13,7 @@ from tkinter import font as tkfont
 from PIL import Image, ImageTk, ImageDraw, ImageFilter
 
 GAME_MODE   = "Minecraft"
-APP_VERSION = "2.7.0"
+APP_VERSION = "2.8.0"
 ACCENT    = "#22c55e"
 ACCENT2   = "#4ade80"
 BG        = "#060606"
