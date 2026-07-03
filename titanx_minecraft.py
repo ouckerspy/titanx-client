@@ -97,6 +97,30 @@ def make_glow_image(width, height, color_hex, blur=18, alpha=150, radius=None, s
     return ImageTk.PhotoImage(img)
 
 
+def lighten_hex(h, amt=0.25):
+    """Aclara un color hex hacia blanco en la proporcion `amt` (0-1)."""
+    r, g, b = hex_to_rgb(h)
+    r = int(r + (255 - r) * amt); g = int(g + (255 - g) * amt); b = int(b + (255 - b) * amt)
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+def make_gradient_image(width, height, color1_hex, color2_hex, radius=12, horizontal=False):
+    """Rectangulo redondeado con relleno degrade vertical, como PhotoImage RGBA."""
+    width, height = max(2, int(width)), max(2, int(height))
+    rgb1, rgb2 = hex_to_rgb(color1_hex), hex_to_rgb(color2_hex)
+    if horizontal:
+        base = Image.new("RGB", (2, 1))
+        base.putpixel((0, 0), rgb1); base.putpixel((1, 0), rgb2)
+    else:
+        base = Image.new("RGB", (1, 2))
+        base.putpixel((0, 0), rgb1); base.putpixel((0, 1), rgb2)
+    grad = base.resize((width, height), Image.BILINEAR).convert("RGBA")
+    mask = Image.new("L", (width, height), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, width - 1, height - 1], radius=radius, fill=255)
+    grad.putalpha(mask)
+    return ImageTk.PhotoImage(grad)
+
+
 def draw_bolt(canvas, cx, cy, size, color):
     """Rayo vectorial (reemplaza el emoji de rayo en el botón principal)."""
     s = size
@@ -190,8 +214,18 @@ class RoundButton(tk.Canvas):
         self._state = "normal"
         font = font or tkfont.Font(family="Segoe UI", size=12, weight="bold")
         r = height / 2
-        self._rect = round_rect(self, 1, 1, width - 1, height - 1, r=r, fill=fill, outline="")
+
+        # Relleno degrade (mas claro arriba, color base abajo) por estado —
+        # se guardan referencias persistentes para que el garbage collector
+        # no se lleve los PhotoImage.
+        self._grad_normal = make_gradient_image(width, height, lighten_hex(fill, 0.24), fill, r)
+        self._grad_hover = make_gradient_image(width, height, lighten_hex(self._hover_fill, 0.24),
+                                                self._hover_fill, r)
+        self._grad_disabled = make_gradient_image(width, height, disabled_fill, disabled_fill, r)
+        self._img_refs = (self._grad_normal, self._grad_hover, self._grad_disabled)
+
         cx = width / 2
+        self._rect = self.create_image(width / 2, height / 2, image=self._grad_normal)
         if icon_fn:
             icon_fn(self, cx - 82, height / 2, 16, fg)
             tx = cx + 12
@@ -204,11 +238,11 @@ class RoundButton(tk.Canvas):
 
     def _on_enter(self, _e=None):
         if self._state == "normal":
-            self.itemconfig(self._rect, fill=self._hover_fill)
+            self.itemconfig(self._rect, image=self._grad_hover)
 
     def _on_leave(self, _e=None):
         if self._state == "normal":
-            self.itemconfig(self._rect, fill=self._fill)
+            self.itemconfig(self._rect, image=self._grad_normal)
 
     def _on_click(self, _e=None):
         if self._state == "normal" and self._command:
@@ -219,11 +253,11 @@ class RoundButton(tk.Canvas):
             state = kwargs.pop("state")
             self._state = state
             if state == "disabled":
-                self.itemconfig(self._rect, fill=self._disabled_fill)
+                self.itemconfig(self._rect, image=self._grad_disabled)
                 self.itemconfig(self._label, fill=self._disabled_fg)
                 super().config(cursor="arrow")
             else:
-                self.itemconfig(self._rect, fill=self._fill)
+                self.itemconfig(self._rect, image=self._grad_normal)
                 self.itemconfig(self._label, fill=self._fg)
                 super().config(cursor="hand2")
         if kwargs:
@@ -394,7 +428,7 @@ class TitanXMinecraftApp:
         # (da atmósfera sutil sin saturar; queda oculto donde 'inner' es opaco).
         ambient = tk.Canvas(left, width=WIN_W // 2, height=WIN_H, bg=BG, highlightthickness=0)
         ambient.place(x=0, y=0)
-        self._ambient_glow_img = make_glow_image(440, 420, ACCENT, blur=75, alpha=45, shape="ellipse")
+        self._ambient_glow_img = make_glow_image(440, 420, ACCENT, blur=70, alpha=140, shape="ellipse")
         self._glow_refs.append(self._ambient_glow_img)
         ambient.create_image((WIN_W // 2) // 2, int(WIN_H * 0.42), image=self._ambient_glow_img)
 
@@ -406,15 +440,17 @@ class TitanXMinecraftApp:
         bcw, bch = badge_w + 2 * badge_pad, badge_h + 2 * badge_pad
         badge = tk.Canvas(inner, width=bcw, height=bch, bg=BG, highlightthickness=0)
         badge.pack(pady=(0, 18))
-        self._badge_glow_img = make_glow_image(bcw, bch, ACCENT, blur=16, alpha=130, radius=14)
+        self._badge_glow_img = make_glow_image(bcw, bch, ACCENT, blur=16, alpha=210, radius=14)
         self._glow_refs.append(self._badge_glow_img)
         badge.create_image(bcw / 2, bch / 2, image=self._badge_glow_img)
         bx, by = badge_pad, badge_pad
-        round_rect(badge, bx + 1, by + 1, bx + badge_w - 1, by + badge_h - 1, r=14,
-                   fill="#08170c", outline="#163a20", width=1)
-        draw_dot(badge, bx + 18, by + badge_h / 2, 3, ACCENT)
+        self._badge_pill_img = make_gradient_image(badge_w, badge_h, "#16a34a", lighten_hex(ACCENT, 0.15),
+                                                     radius=14, horizontal=True)
+        self._glow_refs.append(self._badge_pill_img)
+        badge.create_image(bx + badge_w / 2, by + badge_h / 2, image=self._badge_pill_img)
+        draw_dot(badge, bx + 18, by + badge_h / 2, 3, "#ffffff")
         badge.create_text(bx + badge_w / 2 + 9, by + badge_h / 2, text=f"TITAN X · v{APP_VERSION}",
-                           font=self.f_badge, fill=ACCENT)
+                           font=self.f_badge, fill="#ffffff")
 
         try:
             self.eye = GifLabel(inner, _gif_path(), scale=1.0)
@@ -424,7 +460,16 @@ class TitanXMinecraftApp:
             fb.pack(pady=(0, 16))
             draw_eye(fb, 75, 45, 92, ACCENT)
 
-        tk.Label(inner, text="TITAN X", font=self.f_title, fg=ACCENT, bg=BG).pack()
+        title_txt = "TITAN X"
+        title_w = self.f_title.measure(title_txt) + 90
+        title_h = self.f_title.metrics("linespace") + 50
+        title_wrap = tk.Canvas(inner, width=title_w, height=title_h, bg=BG, highlightthickness=0)
+        title_wrap.pack()
+        self._title_glow_img = make_glow_image(title_w, title_h, ACCENT, blur=26, alpha=200, shape="ellipse")
+        self._glow_refs.append(self._title_glow_img)
+        title_wrap.create_image(title_w / 2, title_h / 2, image=self._title_glow_img)
+        title_wrap.create_text(title_w / 2, title_h / 2, text=title_txt, font=self.f_title, fill="#ffffff")
+
         tk.Label(inner, text="Verificación forense — Minecraft",
                  font=self.f_sub, fg="#3a3a3a", bg=BG).pack(pady=(5, 0))
 
@@ -439,7 +484,7 @@ class TitanXMinecraftApp:
             # Glow sutil detrás del borde superior de acento: se dibuja PRIMERO
             # (capa de abajo) y la tarjeta nítida encima lo tapa casi entero,
             # dejando asomar solo un halo suave por arriba del borde.
-            glow_img = make_glow_image(stat_w - 8, 26, ACCENT, blur=13, alpha=140, radius=6)
+            glow_img = make_glow_image(stat_w - 8, 26, ACCENT, blur=13, alpha=200, radius=6)
             self._glow_refs.append(glow_img)
             c.create_image(scw / 2, stat_pad + 2, image=glow_img)
             ox, oy = stat_pad, stat_pad
@@ -464,7 +509,7 @@ class TitanXMinecraftApp:
         self._ef_canvas = tk.Canvas(form, width=ecw, height=ech, bg=SURFACE, highlightthickness=0)
         self._ef_canvas.pack(pady=(0, 12))
         # Glow del input: se crea oculto y se muestra/oculta al ganar/perder foco.
-        self._ef_glow_img = make_glow_image(ecw, ech, ACCENT, blur=18, alpha=150, radius=20)
+        self._ef_glow_img = make_glow_image(ecw, ech, ACCENT, blur=18, alpha=210, radius=20)
         self._glow_refs.append(self._ef_glow_img)
         self._ef_glow_id = self._ef_canvas.create_image(ecw / 2, ech / 2, image=self._ef_glow_img,
                                                           state="hidden")
@@ -493,7 +538,7 @@ class TitanXMinecraftApp:
         btn_wrap.pack_propagate(False)
         btn_glow_c = tk.Canvas(btn_wrap, width=bwcw, height=bwch, bg=SURFACE, highlightthickness=0)
         btn_glow_c.place(x=0, y=0)
-        self._btn_glow_img = make_glow_image(bwcw, bwch, ACCENT, blur=20, alpha=150, radius=btn_h // 2)
+        self._btn_glow_img = make_glow_image(bwcw, bwch, ACCENT, blur=28, alpha=220, radius=btn_h // 2)
         self._glow_refs.append(self._btn_glow_img)
         btn_glow_c.create_image(bwcw / 2, bwch / 2, image=self._btn_glow_img)
 

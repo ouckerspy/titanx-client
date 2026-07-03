@@ -113,6 +113,13 @@ def hex_to_rgb(h):
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 
+def lighten_hex(h, amt=0.25):
+    """Aclara un color hex hacia blanco en la proporcion `amt` (0-1)."""
+    r, g, b = hex_to_rgb(h)
+    r = int(r + (255 - r) * amt); g = int(g + (255 - g) * amt); b = int(b + (255 - b) * amt)
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
 def make_glow_image(width, height, color_hex, blur=18, alpha=150, radius=None, shape="rect"):
     """Genera un halo de luz suave como PhotoImage RGBA (transparente afuera
     del halo). `shape` puede ser 'rect' (rounded_rectangle) o 'ellipse'."""
@@ -132,6 +139,31 @@ def make_glow_image(width, height, color_hex, blur=18, alpha=150, radius=None, s
         draw.rounded_rectangle([x1, y1, x2, y2], radius=r, fill=rgb + (alpha,))
     img = img.filter(ImageFilter.GaussianBlur(blur))
     return ImageTk.PhotoImage(img)
+
+
+def make_gradient(width, height, color1_hex, color2_hex, horizontal=True):
+    """Gradiente PIL entre dos colores (renderizado como imagen 2x1/1x2 y
+    escalado — mucho mas rapido que iterar pixel por pixel)."""
+    rgb1, rgb2 = hex_to_rgb(color1_hex), hex_to_rgb(color2_hex)
+    if horizontal:
+        base = Image.new("RGB", (2, 1))
+        base.putpixel((0, 0), rgb1); base.putpixel((1, 0), rgb2)
+    else:
+        base = Image.new("RGB", (1, 2))
+        base.putpixel((0, 0), rgb1); base.putpixel((0, 1), rgb2)
+    return base.resize((max(1, int(width)), max(1, int(height))), Image.BILINEAR)
+
+
+def make_gradient_round_image(width, height, color1_hex, color2_hex, radius=12,
+                               horizontal=True):
+    """Rectangulo redondeado con relleno degrade, devuelto como PhotoImage RGBA."""
+    width, height = max(2, int(width)), max(2, int(height))
+    grad = make_gradient(width, height, color1_hex, color2_hex, horizontal).convert("RGBA")
+    mask = Image.new("L", (width, height), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, width - 1, height - 1],
+                                            radius=radius, fill=255)
+    grad.putalpha(mask)
+    return ImageTk.PhotoImage(grad)
 
 
 def draw_icon(canvas, kind, cx, cy, size=16, color=ACCENT, width=1.6):
@@ -269,6 +301,15 @@ class RoundButton(tk.Canvas):
         self._text = text
         self._icon = icon
         self._state = "normal"
+
+        # Relleno degrade (mas claro arriba, color base abajo) precalculado
+        # por estado — se guarda una referencia persistente en self._grad_cache
+        # para evitar que el garbage collector se lleve los PhotoImage.
+        self._grad_cache = {}
+        for c in (fill, hover, press):
+            self._grad_cache[c] = make_gradient_round_image(
+                width, height, lighten_hex(c, 0.24), c, radius=radius, horizontal=False)
+
         self._render(self._fill)
 
         self.bind("<Enter>", self._on_enter)
@@ -278,7 +319,11 @@ class RoundButton(tk.Canvas):
 
     def _render(self, color):
         self.delete("all")
-        draw_round_rect(self, 1, 1, self._bw - 1, self._h - 1, self._r, fill=color, outline="")
+        grad = self._grad_cache.get(color)
+        if grad is not None:
+            self.create_image(self._bw / 2, self._h / 2, image=grad)
+        else:
+            draw_round_rect(self, 1, 1, self._bw - 1, self._h - 1, self._r, fill=color, outline="")
         fg = self._fg if self._state == "normal" else self._disabled_fg
         text_id = self.create_text(0, self._h / 2, text=self._text, font=self._font,
                                     fill=fg, anchor="w")
@@ -456,16 +501,18 @@ class TitanXApp:
     # ─── Fabricas de widgets tipo tarjeta ───────────────────────────────
     def _make_badge(self, parent, text):
         tw = self.f_tag.measure(text)
-        w, h = tw + 30, 26
-        pad = 12
+        w, h = tw + 34, 30
+        pad = 22
         cw, ch = w + 2 * pad, h + 2 * pad
         c = tk.Canvas(parent, width=cw, height=ch, bg=BG, highlightthickness=0, bd=0)
-        glow_img = make_glow_image(cw, ch, ACCENT, blur=pad, alpha=130, radius=h / 2)
+        glow_img = make_glow_image(cw, ch, ACCENT, blur=pad, alpha=210, radius=h / 2)
         self._glow_refs.append(glow_img)
         c.create_image(cw / 2, ch / 2, image=glow_img)
-        draw_round_rect(c, pad, pad, pad + w - 1, pad + h - 1, h / 2,
-                         fill=ACCENT_SOFT, outline=ACCENT_LINE, width=1)
-        c.create_text(cw / 2, ch / 2, text=text, font=self.f_tag, fill=ACCENT)
+        pill_img = make_gradient_round_image(w, h, ACCENT_PRESS, ACCENT_HOVER,
+                                              radius=h / 2, horizontal=True)
+        self._glow_refs.append(pill_img)
+        c.create_image(cw / 2, ch / 2, image=pill_img)
+        c.create_text(cw / 2, ch / 2, text=text, font=self.f_tag, fill="#ffffff")
         return c
 
     def _make_stat_card(self, parent, value, label, width=108, height=62):
@@ -473,8 +520,8 @@ class TitanXApp:
         draw_round_rect(c, 0, 0, width - 1, height - 1, 10, fill=CARD_BG, outline=CARD_BORDER, width=1)
         # Glow sutil detras del borde superior de acento (queda "encendido" en
         # la propia superficie de la tarjeta, sin salirse del card).
-        glow_w, glow_h = width - 24, 20
-        glow_img = make_glow_image(glow_w, glow_h, ACCENT, blur=8, alpha=140, radius=glow_h / 2)
+        glow_w, glow_h = width - 20, 26
+        glow_img = make_glow_image(glow_w, glow_h, ACCENT, blur=13, alpha=200, radius=glow_h / 2)
         self._glow_refs.append(glow_img)
         c.create_image(width / 2, 4, image=glow_img)
         c.create_line(16, 2, width - 16, 2, fill=ACCENT, width=2, capstyle="round")
@@ -523,7 +570,7 @@ class TitanXApp:
         eye_cy = eye_widget.winfo_y() + eye_h / 2
         blob_w = max(60, int(eye_w * 1.2))
         blob_h = max(60, int(eye_h * 1.2))
-        ambient_img = make_glow_image(blob_w, blob_h, ACCENT, blur=46, alpha=90, shape="ellipse")
+        ambient_img = make_glow_image(blob_w, blob_h, ACCENT, blur=50, alpha=150, shape="ellipse")
         self._glow_refs.append(ambient_img)
         ambient = tk.Canvas(inner, width=blob_w, height=blob_h, bg=BG, highlightthickness=0, bd=0)
         ambient.create_image(blob_w / 2, blob_h / 2, image=ambient_img)
@@ -534,7 +581,19 @@ class TitanXApp:
         # propio canvas de glow detras del widget del ojo.
         tk.Widget.lower(ambient, eye_widget)
 
-        tk.Label(inner, text="TITAN X", font=self.f_title, fg=ACCENT, bg=BG).pack()
+        title_txt = "TITAN X"
+        title_w = self.f_title.measure(title_txt) + 90
+        title_h = self.f_title.metrics("linespace") + 50
+        title_wrap = tk.Canvas(inner, width=title_w, height=title_h, bg=BG,
+                                highlightthickness=0, bd=0)
+        title_wrap.pack()
+        title_glow_img = make_glow_image(title_w, title_h, ACCENT, blur=26,
+                                          alpha=200, shape="ellipse")
+        self._glow_refs.append(title_glow_img)
+        title_wrap.create_image(title_w / 2, title_h / 2, image=title_glow_img)
+        title_wrap.create_text(title_w / 2, title_h / 2, text=title_txt,
+                                font=self.f_title, fill="#ffffff")
+
         tk.Label(inner, text="Sistema de verificación forense avanzada",
                  font=self.f_sub, fg=TXT_FAINT, bg=BG).pack(pady=(5, 0))
 
@@ -564,7 +623,7 @@ class TitanXApp:
 
         # Glow que aparece solo cuando el input tiene foco (oculto por defecto).
         code_glow_img = make_glow_image(cw_total, ch_total, ACCENT, blur=code_pad,
-                                         alpha=150, radius=16)
+                                         alpha=210, radius=16)
         self._glow_refs.append(code_glow_img)
         self._code_glow_item = code_wrap.create_image(cw_total / 2, ch_total / 2, image=code_glow_img)
         code_wrap.itemconfigure(self._code_glow_item, state="hidden")
@@ -604,8 +663,8 @@ class TitanXApp:
         btn_wrap = tk.Canvas(form, width=bw_total, height=bh_total, bg=SURFACE,
                               highlightthickness=0, bd=0)
         btn_wrap.pack()
-        btn_glow_img = make_glow_image(bw_total, bh_total, ACCENT, blur=btn_pad,
-                                        alpha=160, radius=16)
+        btn_glow_img = make_glow_image(bw_total, bh_total, ACCENT, blur=btn_pad + 8,
+                                        alpha=220, radius=16)
         self._glow_refs.append(btn_glow_img)
         btn_wrap.create_image(bw_total / 2, bh_total / 2, image=btn_glow_img)
 
