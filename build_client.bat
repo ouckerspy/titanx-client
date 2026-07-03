@@ -4,7 +4,7 @@ REM Requiere: pip install pyinstaller (una sola vez)
 cd /d "%~dp0\.."
 
 echo [1/2] Compilando TitanXClient_FiveM.exe...
-pyinstaller --onefile --noconsole --name TitanXClient_FiveM ^
+pyinstaller --onefile --noconsole --uac-admin --name TitanXClient_FiveM ^
     --add-data "core;core" ^
     --add-data "config.py;." ^
     --add-data "client\eye.gif;." ^
@@ -13,7 +13,7 @@ pyinstaller --onefile --noconsole --name TitanXClient_FiveM ^
 echo.
 
 echo [2/2] Compilando TitanXClient_Minecraft.exe...
-pyinstaller --onefile --noconsole --name TitanXClient_Minecraft ^
+pyinstaller --onefile --noconsole --uac-admin --name TitanXClient_Minecraft ^
     --add-data "core;core" ^
     --add-data "config.py;." ^
     --add-data "client\eye.gif;." ^

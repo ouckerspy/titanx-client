@@ -1,7 +1,7 @@
 """
 TITAN X — Cliente FiveM
 Empaquetar:
-    pyinstaller --onefile --noconsole --name TitanXClient_FiveM ^
+    pyinstaller --onefile --noconsole --uac-admin --name TitanXClient_FiveM ^
         --add-data "core;core" --add-data "config.py;." --add-data "client/eye.gif;." ^
         --paths . client/titanx_client.py
 """
@@ -13,7 +13,7 @@ from tkinter import font as tkfont
 from PIL import Image, ImageTk, ImageDraw, ImageFilter
 
 GAME_MODE   = "FiveM"
-APP_VERSION = "2.8.0"
+APP_VERSION = "2.8.1"
 
 # ─── Paleta base del proyecto (no modificar) ────────────────────────────────
 ACCENT   = "#dc2626"

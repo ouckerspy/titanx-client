@@ -1,7 +1,7 @@
 """
 TITAN X — Cliente Minecraft
 Empaquetar:
-    pyinstaller --onefile --noconsole --name TitanXClient_Minecraft ^
+    pyinstaller --onefile --noconsole --uac-admin --name TitanXClient_Minecraft ^
         --add-data "core;core" --add-data "config.py;." --add-data "client/eye.gif;." ^
         --paths . client/titanx_minecraft.py
 """
@@ -13,7 +13,7 @@ from tkinter import font as tkfont
 from PIL import Image, ImageTk, ImageDraw, ImageFilter
 
 GAME_MODE   = "Minecraft"
-APP_VERSION = "2.8.0"
+APP_VERSION = "2.8.1"
 ACCENT    = "#22c55e"
 ACCENT2   = "#4ade80"
 BG        = "#060606"
