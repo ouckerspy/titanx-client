@@ -13,7 +13,7 @@ from tkinter import font as tkfont
 from PIL import Image, ImageTk, ImageDraw, ImageFilter
 
 GAME_MODE   = "FiveM"
-APP_VERSION = "2.8.1"
+APP_VERSION = "2.8.2"
 
 # ─── Paleta base del proyecto (no modificar) ────────────────────────────────
 ACCENT   = "#dc2626"
