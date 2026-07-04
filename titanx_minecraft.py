@@ -478,7 +478,7 @@ class TitanXMinecraftApp:
         stat_w, stat_h = 112, 66
         stat_pad = 12
         scw, sch = stat_w + 2 * stat_pad, stat_h + 2 * stat_pad
-        for label, val in [("MÓDULOS", "202"), ("JUEGO", "Minecraft"), ("MODO", "Forense")]:
+        for label, val in [("MÓDULOS", "201"), ("JUEGO", "Minecraft"), ("MODO", "Forense")]:
             c = tk.Canvas(stats_row, width=scw, height=sch, bg=BG, highlightthickness=0)
             c.pack(side="left", padx=5)
             # Glow sutil detrás del borde superior de acento: se dibuja PRIMERO
@@ -568,7 +568,7 @@ class TitanXMinecraftApp:
 
         bot = tk.Frame(right, bg="#0a0a0a", height=32)
         bot.pack(side="bottom", fill="x"); bot.pack_propagate(False)
-        tk.Label(bot, text=f"Minecraft · 202 módulos forenses · v{APP_VERSION}",
+        tk.Label(bot, text=f"Minecraft · 201 módulos forenses · v{APP_VERSION}",
                  font=tkfont.Font(family="Segoe UI", size=8),
                  fg="#242424", bg="#0a0a0a").pack(side="left", padx=14, pady=8)
         tk.Label(bot, text="titanxanticheat.xyz",
@@ -659,7 +659,7 @@ class TitanXMinecraftApp:
         pa = tk.Frame(card_c, bg=SURFACE2)
         card_c.create_window(card_w / 2, card_h / 2, window=pa)
 
-        self.module_counter_lbl = tk.Label(pa, text="0 / 202 módulos",
+        self.module_counter_lbl = tk.Label(pa, text="0 / 201 módulos",
                  font=tkfont.Font(family="Segoe UI", size=8, weight="bold"), fg="#3a3a3a", bg=SURFACE2)
         self.module_counter_lbl.pack(pady=(4, 6))
 

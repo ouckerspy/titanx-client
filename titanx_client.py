@@ -39,7 +39,7 @@ GREEN         = "#22c55e"
 
 WIN_W, WIN_H  = 1040, 660
 VERCEL_URL    = "https://titanxanticheat.xyz"
-TOTAL_MODULES = 202
+TOTAL_MODULES = 201
 
 
 def _gif_path():
